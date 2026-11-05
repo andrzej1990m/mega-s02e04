@@ -2,10 +2,20 @@ import json
 import unittest
 from unittest.mock import patch
 
-from worker import decode_rpc, has_receipt, main, unpack_result
+from worker import MCP, decode_rpc, has_receipt, main, unpack_result
 
 
 class WorkerTests(unittest.TestCase):
+    def test_mcp_identifies_application_in_http_request(self):
+        with patch("worker.urllib.request.urlopen") as urlopen:
+            response = urlopen.return_value.__enter__.return_value
+            response.headers = {}
+            response.read.return_value = b'{"jsonrpc":"2.0","id":1,"result":{}}'
+            client = MCP("https://hq.mega.dev/mcp/job/test", [])
+            client.request("initialize", {})
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.get_header("User-agent"), "mega-incident-worker/1.0")
+
     def test_decodes_json_and_sse(self):
         message = {"jsonrpc": "2.0", "id": 1, "result": {"tools": []}}
         data = json.dumps(message).encode()

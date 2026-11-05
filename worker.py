@@ -73,6 +73,7 @@ class MCP:
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
+            "User-Agent": "mega-incident-worker/1.0",
         }
         if self.session:
             headers["Mcp-Session-Id"] = self.session

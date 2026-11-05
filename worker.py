@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -12,6 +13,24 @@ import urllib.request
 
 class WorkerError(Exception):
     pass
+
+
+def call_gemini(request, log):
+    for attempt in range(2):
+        try:
+            with urllib.request.urlopen(request, timeout=90) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as error:
+            if error.code != 503 or attempt:
+                raise
+            log.append(
+                {
+                    "gemini_retry": 1,
+                    "http_status": error.code,
+                    "body": error.read().decode(errors="replace"),
+                }
+            )
+            time.sleep(5)
 
 
 def decode_rpc(body):
@@ -178,8 +197,7 @@ def run_agent(log):
                 "x-goog-api-key": os.environ["GEMINI_API_KEY"],
             },
         )
-        with urllib.request.urlopen(request, timeout=90) as response:
-            reply = json.load(response)
+        reply = call_gemini(request, log)
         log.append({"gemini_reply": reply})
         candidates = reply.get("candidates", [])
         if not candidates or "content" not in candidates[0]:

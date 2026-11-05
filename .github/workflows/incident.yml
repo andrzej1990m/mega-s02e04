@@ -1,0 +1,33 @@
+name: Incident worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Leave empty to list models without starting the course job
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  incident:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the remote agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          JOB_MCP_URL: ${{ secrets.JOB_MCP_URL }}
+          RESULT_CERTIFICATE: ${{ secrets.RESULT_CERTIFICATE }}
+          GEMINI_MODEL: ${{ inputs.model }}
+        run: python3 worker.py
+      - name: Upload encrypted result
+        uses: actions/upload-artifact@v4
+        with:
+          name: incident-result-encrypted
+          path: result.enc
+          retention-days: 1
+          if-no-files-found: error
